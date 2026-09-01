@@ -135,7 +135,7 @@ document.getElementById('voiceToggle').addEventListener('click', ()=>{
   }
 });
 
-function speak(text){
+function speak(text, round){
   if (!audioEnabled || !('speechSynthesis' in window)) return;
   if (!text || text === lastSpokenText) return;
   lastSpokenText = text;
@@ -148,7 +148,14 @@ function speak(text){
   if (koreanVoices.length){
     u.voice = koreanVoices[mySeat % koreanVoices.length];
   }
+  u.onend = ()=>{ sendAck(round); };
+  u.onerror = ()=>{ sendAck(round); };
   speechSynthesis.speak(u);
+}
+
+function sendAck(round){
+  if (round === undefined) return;
+  jsonpRequest({action:'ackSpeech', seat: mySeat, round: round}).catch(()=>{});
 }
 
 const params = new URLSearchParams(location.search);
@@ -263,7 +270,7 @@ function render(data){
       card.classList.remove('speaking');
       commentBox.className = 'comment';
       commentBox.textContent = mine.text;
-      speak(mine.text);
+      speak(mine.text, data.updatedAt);
     } else if (data.currentSpeaker === mySeat){
       card.classList.add('speaking');
       commentBox.className = 'comment';
