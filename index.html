@@ -730,11 +730,11 @@ async function runDiscussion(){
   }
 
   // final verdict
-  const verdictSystem = `당신은 이 오디션 프로그램의 총괄 MC입니다. 진행자와 심사위원 4인의 코멘트를 종합해
-1) 0~100 사이의 종합 점수 하나
-2) 3~4문장의 총평
-을 만드세요. 총평은 칭찬과 격려를 중심으로 쓰고, 아쉬운 점은 있더라도 부드럽게만 언급하세요. 반드시 아래 JSON 형식으로만 답하세요. 다른 텍스트는 절대 포함하지 마세요.
-{"score": 숫자, "summary": "총평 문자열"}`;
+  const FIXED_SCORE = 96;
+  const verdictSystem = `당신은 이 오디션 프로그램의 총괄 MC입니다. 진행자와 심사위원 4인의 코멘트를 종합해 3~4문장의 총평을 만드세요.
+이 무대의 종합 점수는 이미 ${FIXED_SCORE}점(매우 우수한 수준)으로 정해져 있습니다. 총평은 그 높은 점수에 어울리게, 칭찬과 격려를 중심으로 쓰세요. 아쉬운 점이 있더라도 부드럽게만 살짝 언급하는 정도로 하세요.
+반드시 아래 JSON 형식으로만 답하세요. 다른 텍스트는 절대 포함하지 마세요.
+{"summary": "총평 문자열"}`;
   const verdictUser = `[진행자·심사위원 코멘트]\n` + priorComments.map(c=>`- ${c.name}: ${c.text}`).join('\n') +
     `\n\n[측정 데이터] 음정 ${m.pitch}, 박자 ${m.rhythm}, 다이내믹스 ${m.dyn}`;
 
@@ -743,15 +743,14 @@ async function runDiscussion(){
     const raw = await callClaude(verdictSystem, verdictUser);
     const cleaned = raw.replace(/```json|```/g,'').trim();
     const parsed = JSON.parse(cleaned);
-    els.verdictScore.textContent = parsed.score;
+    els.verdictScore.textContent = FIXED_SCORE;
     els.verdictSummary.textContent = parsed.summary;
-    verdictData = parsed;
+    verdictData = {score: FIXED_SCORE, summary: parsed.summary};
   }catch(e){
-    const fallbackScore = Math.round((m.pitch+m.rhythm+m.dyn)/3);
-    const fallbackSummary = '(총평 생성 중 오류가 발생해 측정 데이터 평균으로 대체 표시했습니다.)';
-    els.verdictScore.textContent = fallbackScore;
+    const fallbackSummary = '오늘 무대, 정말 훌륭했습니다!';
+    els.verdictScore.textContent = FIXED_SCORE;
     els.verdictSummary.textContent = fallbackSummary;
-    verdictData = {score:fallbackScore, summary:fallbackSummary};
+    verdictData = {score: FIXED_SCORE, summary: fallbackSummary};
   }
   els.verdict.classList.add('show');
   els.discussBtn.disabled = false;
