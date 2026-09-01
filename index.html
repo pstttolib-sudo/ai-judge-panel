@@ -241,22 +241,26 @@ const JUDGES = [
 const HOST = {name:"진행자 강한결", role:"프로그램 MC · 전체 분위기 진행", tone:"활기차고 따뜻하게 무대 직후 분위기를 먼저 짚어주는 어투. 심사위원들의 토론 물꼬를 트는 역할.", pitch:1.05, rate:1.05};
 const SPEAKING_SEATS = [0,1,2,3]; // 이번 라운드에 실제로 발언하는 심사위원 인덱스 (1,2,3,4번)
 
-// 코멘트를 다 읽는 데 걸릴 대략적인 시간(ms) - 한국어 TTS 기준 초당 약 3.3자, 화자별 rate 반영
+// 코멘트를 다 읽는 데 걸릴 대략적인 시간(ms) - 한국어 TTS 기준 초당 약 5자, 화자별 rate 반영
 function estimateSpeakMs(text, rate){
-  const charsPerSec = 3.3 * (rate || 1);
-  return Math.max(2200, Math.round((text.length / charsPerSec) * 1000) + 900);
+  const charsPerSec = 5 * (rate || 1);
+  return Math.max(1000, Math.round((text.length / charsPerSec) * 1000) + 300);
 }
 
-// 진행자(MC) 음성 안내
+// 진행자(MC) 음성 안내 - 실제 음성이 끝날 때까지 기다리는 Promise
 let hostAudioEnabled = false;
 function speakHost(text){
-  if (!hostAudioEnabled || !('speechSynthesis' in window) || !text) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'ko-KR';
-  u.pitch = HOST.pitch;
-  u.rate = HOST.rate;
-  speechSynthesis.speak(u);
+  return new Promise((resolve)=>{
+    if (!hostAudioEnabled || !('speechSynthesis' in window) || !text){ resolve(); return; }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR';
+    u.pitch = HOST.pitch;
+    u.rate = HOST.rate;
+    u.onend = ()=>resolve();
+    u.onerror = ()=>resolve();
+    speechSynthesis.speak(u);
+  });
 }
 
 let els = {
@@ -352,6 +356,7 @@ function jsonpRequest(params){
 }
 
 async function saveState(){
+  const updatedAt = Date.now();
   try{
     await jsonpRequest({
       action: 'write',
@@ -364,10 +369,26 @@ async function saveState(){
         verdict: state.verdict,
         mc: state.mc,
         speakingSeats: SPEAKING_SEATS,
-        updatedAt: Date.now()
+        updatedAt
       })
     });
   }catch(e){ console.warn('공유 저장 실패', e); }
+  return updatedAt;
+}
+
+/** 특정 심사위원 자리(seat)가 round 시점 이후로 음성 재생을 끝냈다는 신호가 올 때까지 대기.
+ *  신호가 안 오면(음성 꺼짐/오류 등) maxMs 후 그냥 진행 — 방송이 멈추지 않도록 하는 안전장치. */
+async function waitForAck(seat, round, maxMs){
+  const start = Date.now();
+  while (Date.now() - start < maxMs){
+    try{
+      const res = await jsonpRequest({action:'readAck'});
+      const ack = res && res.ack ? JSON.parse(res.ack) : {};
+      if (ack[seat] && ack[seat] >= round) return true;
+    }catch(e){}
+    await new Promise(r=>setTimeout(r, 400));
+  }
+  return false;
 }
 
 function autoCorrelate(buf, sampleRate){
@@ -667,8 +688,7 @@ async function runDiscussion(){
   priorComments.push({name:HOST.name, text:mcText});
   state.mc = {name:HOST.name, text:mcText};
   saveState();
-  speakHost(mcText);
-  await new Promise(r=>setTimeout(r, estimateSpeakMs(mcText, HOST.rate)));
+  await speakHost(mcText);
 
   // 2) 심사위원 1~3번 순서대로 발언 (앞선 발언 모두 참고)
   for (const i of SPEAKING_SEATS){
@@ -704,9 +724,9 @@ async function runDiscussion(){
     priorComments.push({name:j.name, text});
     state.comments.push({seat:i, name:j.name, role:j.role, text});
     state.currentSpeaker = -1;
-    saveState();
+    const savedAt = await saveState();
     card.classList.remove('speaking');
-    await new Promise(r=>setTimeout(r, estimateSpeakMs(text, j.rate)));
+    await waitForAck(i, savedAt, estimateSpeakMs(text, j.rate) + 2000);
   }
 
   // final verdict
@@ -739,6 +759,7 @@ async function runDiscussion(){
   state.status = 'done';
   state.verdict = verdictData;
   saveState();
+  await speakHost(`종합 판정 점수는! ${verdictData.score}점입니다!`);
 }
 
 els.discussBtn.addEventListener('click', runDiscussion);
