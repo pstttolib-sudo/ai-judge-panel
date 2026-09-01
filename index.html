@@ -249,6 +249,22 @@ function estimateSpeakMs(text, rate){
 
 // 진행자(MC) 음성 안내 - 실제 음성이 끝날 때까지 기다리는 Promise
 let hostAudioEnabled = false;
+let hostVoices = [];
+function loadHostVoices(){
+  const all = speechSynthesis.getVoices().filter(v=>v.lang && v.lang.startsWith('ko'));
+  const score = v => {
+    const n = (v.name || '').toLowerCase();
+    let s = 0;
+    if (n.includes('enhanced') || n.includes('premium') || n.includes('고급') || n.includes('향상')) s += 2;
+    if (v.localService === false) s += 1;
+    return s;
+  };
+  hostVoices = all.sort((a,b)=>score(b)-score(a));
+}
+if ('speechSynthesis' in window){
+  loadHostVoices();
+  speechSynthesis.onvoiceschanged = loadHostVoices;
+}
 function speakHost(text){
   return new Promise((resolve)=>{
     if (!hostAudioEnabled || !('speechSynthesis' in window) || !text){ resolve(); return; }
@@ -257,6 +273,7 @@ function speakHost(text){
     u.lang = 'ko-KR';
     u.pitch = HOST.pitch;
     u.rate = HOST.rate;
+    if (hostVoices.length) u.voice = hostVoices[0];
     u.onend = ()=>resolve();
     u.onerror = ()=>resolve();
     speechSynthesis.speak(u);
