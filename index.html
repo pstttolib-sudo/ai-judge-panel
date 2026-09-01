@@ -212,6 +212,7 @@
   <div class="lyrics-box" id="mcBox" style="display:none;">
     <div class="label">진행자 강한결 (MC)</div>
     <div id="mcComment"></div>
+    <button id="hostVoiceToggle" class="toggle-fallback" style="margin-top:10px;">🔇 진행자 음성 켜기 (탭 한 번 필요)</button>
   </div>
 
   <h2 class="grid-title">심사위원 7인 (이번 라운드는 1~4번이 대화합니다)</h2>
@@ -229,16 +230,34 @@
 
 <script>
 const JUDGES = [
-  {name:"왕언니봇", role:"원로 트로트 명인 · 무대 매너", tone:"연륜있고 단호하지만 애정이 담긴 어투. 무대 장악력과 관객 호응을 중시."},
-  {name:"핏치제로", role:"보컬 트레이너 · 발성 전문가", tone:"기술적이고 분석적. 음정 데이터와 발성 디테일을 근거로 말함."},
-  {name:"비트마스터", role:"힙합 프로듀서 · 리듬감", tone:"박자 그루브와 시대감각을 중시. 캐주얼하고 직설적인 어투."},
-  {name:"감성센서", role:"발라드 가수 출신 · 감정선", tone:"가사 전달력과 감정 몰입을 중시. 서정적이고 따뜻한 어투."},
-  {name:"팩트체커", role:"냉철한 음악평론가", tone:"객관적이지만 애정 어린 시선으로, 잘한 점을 먼저 짚어주는 어투."},
-  {name:"밈머신", role:"예능 감초 심사위원", tone:"위트있고 유쾌하지만 핵심 평가는 놓치지 않음."},
-  {name:"트렌드레이더", role:"팬 대표 · 대중 반응", tone:"대중이 실제로 어떻게 느낄지, 화제성 관점에서 말함."}
+  {name:"왕언니봇", role:"원로 트로트 명인 · 무대 매너", tone:"연륜있고 단호하지만 애정이 담긴 어투. 무대 장악력과 관객 호응을 중시.", rate:0.88},
+  {name:"핏치제로", role:"보컬 트레이너 · 발성 전문가", tone:"기술적이고 분석적. 음정 데이터와 발성 디테일을 근거로 말함.", rate:1.0},
+  {name:"비트마스터", role:"힙합 프로듀서 · 리듬감", tone:"박자 그루브와 시대감각을 중시. 캐주얼하고 직설적인 어투.", rate:1.15},
+  {name:"감성센서", role:"발라드 가수 출신 · 감정선", tone:"가사 전달력과 감정 몰입을 중시. 서정적이고 따뜻한 어투.", rate:0.92},
+  {name:"팩트체커", role:"냉철한 음악평론가", tone:"객관적이지만 애정 어린 시선으로, 잘한 점을 먼저 짚어주는 어투.", rate:0.95},
+  {name:"밈머신", role:"예능 감초 심사위원", tone:"위트있고 유쾌하지만 핵심 평가는 놓치지 않음.", rate:1.25},
+  {name:"트렌드레이더", role:"팬 대표 · 대중 반응", tone:"대중이 실제로 어떻게 느낄지, 화제성 관점에서 말함.", rate:1.1}
 ];
-const HOST = {name:"진행자 강한결", role:"프로그램 MC · 전체 분위기 진행", tone:"활기차고 따뜻하게 무대 직후 분위기를 먼저 짚어주는 어투. 심사위원들의 토론 물꼬를 트는 역할."};
+const HOST = {name:"진행자 강한결", role:"프로그램 MC · 전체 분위기 진행", tone:"활기차고 따뜻하게 무대 직후 분위기를 먼저 짚어주는 어투. 심사위원들의 토론 물꼬를 트는 역할.", pitch:1.05, rate:1.05};
 const SPEAKING_SEATS = [0,1,2,3]; // 이번 라운드에 실제로 발언하는 심사위원 인덱스 (1,2,3,4번)
+
+// 코멘트를 다 읽는 데 걸릴 대략적인 시간(ms) - 한국어 TTS 기준 초당 약 3.3자, 화자별 rate 반영
+function estimateSpeakMs(text, rate){
+  const charsPerSec = 3.3 * (rate || 1);
+  return Math.max(2200, Math.round((text.length / charsPerSec) * 1000) + 900);
+}
+
+// 진행자(MC) 음성 안내
+let hostAudioEnabled = false;
+function speakHost(text){
+  if (!hostAudioEnabled || !('speechSynthesis' in window) || !text) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ko-KR';
+  u.pitch = HOST.pitch;
+  u.rate = HOST.rate;
+  speechSynthesis.speak(u);
+}
 
 let els = {
   recBtn: document.getElementById('recBtn'),
@@ -288,6 +307,17 @@ JUDGES.forEach((j,i)=>{
 
 els.toggleFallback.addEventListener('click', ()=>{
   els.fallbackBox.classList.toggle('show');
+});
+
+document.getElementById('hostVoiceToggle').addEventListener('click', (e)=>{
+  hostAudioEnabled = !hostAudioEnabled;
+  if (hostAudioEnabled){
+    speechSynthesis.speak(new SpeechSynthesisUtterance(' '));
+    e.target.textContent = '🔊 진행자 음성 켜짐';
+  } else {
+    speechSynthesis.cancel();
+    e.target.textContent = '🔇 진행자 음성 켜기 (탭 한 번 필요)';
+  }
 });
 
 let state = {
@@ -637,6 +667,8 @@ async function runDiscussion(){
   priorComments.push({name:HOST.name, text:mcText});
   state.mc = {name:HOST.name, text:mcText};
   saveState();
+  speakHost(mcText);
+  await new Promise(r=>setTimeout(r, estimateSpeakMs(mcText, HOST.rate)));
 
   // 2) 심사위원 1~3번 순서대로 발언 (앞선 발언 모두 참고)
   for (const i of SPEAKING_SEATS){
@@ -674,7 +706,7 @@ async function runDiscussion(){
     state.currentSpeaker = -1;
     saveState();
     card.classList.remove('speaking');
-    await new Promise(r=>setTimeout(r, 250));
+    await new Promise(r=>setTimeout(r, estimateSpeakMs(text, j.rate)));
   }
 
   // final verdict
