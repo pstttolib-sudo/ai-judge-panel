@@ -112,7 +112,16 @@ let lastSpokenText = '';
 let koreanVoices = [];
 
 function loadVoices(){
-  koreanVoices = speechSynthesis.getVoices().filter(v=>v.lang && v.lang.startsWith('ko'));
+  const all = speechSynthesis.getVoices().filter(v=>v.lang && v.lang.startsWith('ko'));
+  // '고급/프리미엄/향상됨' 등급이거나 로컬(저용량 압축) 음성이 아닌 쪽을 우선 사용
+  const score = v => {
+    const n = (v.name || '').toLowerCase();
+    let s = 0;
+    if (n.includes('enhanced') || n.includes('premium') || n.includes('고급') || n.includes('향상')) s += 2;
+    if (v.localService === false) s += 1;
+    return s;
+  };
+  koreanVoices = all.sort((a,b)=>score(b)-score(a));
 }
 if ('speechSynthesis' in window){
   loadVoices();
