@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>심사위원 화면</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-stage:#171310; --bg-panel:#221C17; --bg-panel-active:#2C241C;
+    --gold:#E3A83B; --gold-dim:#8C6A2B; --velvet:#8B2E2E; --steel:#3E7CB1;
+    --text-main:#F1E9DA; --text-dim:#B8AC98; --line:#3A322A;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:var(--bg-stage); color:var(--text-main);
+    font-family:'Noto Sans KR',sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .card{
+    width:100%; max-width:640px;
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:6px;
+    padding:36px; text-align:center;
+  }
+  .card.speaking{border-color:var(--gold); background:var(--bg-panel-active);}
+  .seat-tag{color:var(--gold-dim); font-family:'Black Han Sans',sans-serif; font-size:14px; letter-spacing:2px; margin-bottom:10px;}
+  .name{font-family:'Black Han Sans',sans-serif; font-size:38px; margin:0 0 4px;}
+  .role{color:var(--text-dim); font-size:14px; margin-bottom:26px;}
+  .comment{font-size:19px; line-height:1.7; min-height:80px;}
+  .comment.waiting{color:var(--text-dim); font-style:italic; font-size:16px;}
+  .thinking{display:inline-flex; gap:5px;}
+  .thinking span{width:7px;height:7px;background:var(--gold);border-radius:50%;animation:blink 1.2s infinite;}
+  .thinking span:nth-child(2){animation-delay:.2s;}
+  .thinking span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,80%,100%{opacity:.2;}40%{opacity:1;}}
+
+  .setup{
+    width:100%; max-width:360px; background:var(--bg-panel); border:1px solid var(--line);
+    border-radius:6px; padding:28px; text-align:center;
+  }
+  .setup h2{font-family:'Black Han Sans',sans-serif; font-size:22px; margin:0 0 16px;}
+  .setup select, .setup button{
+    width:100%; padding:12px; margin-top:10px; border-radius:4px; border:1px solid var(--line);
+    background:#0F0C0A; color:var(--text-main); font-size:15px; font-family:'Noto Sans KR',sans-serif;
+  }
+  .setup button{background:var(--gold); color:#171310; font-weight:700; border:none; cursor:pointer;}
+  .footer-status{position:fixed; bottom:14px; right:16px; font-size:11px; color:var(--text-dim);}
+  .badge{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--line); margin-right:5px;}
+  .badge.ok{background:#4CAF7D;}
+  .badge.err{background:var(--velvet);}
+
+  .verdict-banner{
+    margin-top:18px; padding-top:18px; border-top:1px dashed var(--line);
+    font-size:13px; color:var(--gold);
+  }
+  .voice-btn{
+    margin-top:24px; width:100%; padding:12px; border-radius:4px; border:1px solid var(--line);
+    background:#0F0C0A; color:var(--text-dim); font-size:13px; cursor:pointer;
+    font-family:'Noto Sans KR',sans-serif;
+  }
+  .voice-btn.on{border-color:var(--gold); color:var(--gold);}
+  .mc-banner{
+    font-size:12px; color:var(--text-dim); background:#0F0C0A; border:1px solid var(--line);
+    border-radius:4px; padding:10px 12px; margin-bottom:18px; text-align:left; line-height:1.5;
+  }
+</style>
+</head>
+<body>
+
+<div id="setupScreen" class="setup">
+  <h2>이 태블릿은 몇 번 심사위원인가요?</h2>
+  <select id="seatSelect">
+    <option value="0">1번 — 故 임춘앵</option>
+    <option value="1">2번 — 한서율</option>
+    <option value="2">3번 — 비트마스터 그루브</option>
+    <option value="3">4번 — 윤서하</option>
+    <option value="4">5번 — 강필도</option>
+    <option value="5">6번 — 뿅뿅이</option>
+    <option value="6">7번 — 직캠러 지수</option>
+  </select>
+  <button id="confirmSeat">이 화면으로 설정</button>
+</div>
+
+<div id="seatScreen" class="card" style="display:none;">
+  <div class="seat-tag" id="seatTag">SEAT –</div>
+  <div class="name" id="judgeName">–</div>
+  <div class="role" id="judgeRole">–</div>
+  <div class="mc-banner" id="mcBanner" style="display:none;"></div>
+  <div class="comment waiting" id="commentBox">무대를 기다리는 중...</div>
+  <div class="verdict-banner" id="verdictBanner" style="display:none;"></div>
+  <button id="voiceToggle" class="voice-btn">🔇 음성 켜기 (탭 한 번 필요)</button>
+</div>
+
+<div class="footer-status"><span class="badge" id="connBadge"></span><span id="connText">연결 확인 중</span></div>
+
+<script>
+const JUDGES = [
+  {name:"故 임춘앵", role:"원로 트로트 명인 · 무대 매너", pitch:0.75, rate:0.88},
+  {name:"한서율", role:"보컬 트레이너 · 발성 전문가", pitch:1.0, rate:1.0},
+  {name:"비트마스터 그루브", role:"힙합 프로듀서 · 리듬감", pitch:0.85, rate:1.15},
+  {name:"윤서하", role:"발라드 가수 출신 · 감정선", pitch:1.25, rate:0.92},
+  {name:"강필도", role:"냉철한 음악평론가", pitch:0.8, rate:0.95},
+  {name:"뿅뿅이", role:"예능 감초 심사위원", pitch:1.35, rate:1.25},
+  {name:"직캠러 지수", role:"팬 대표 · 대중 반응", pitch:1.3, rate:1.1}
+];
+
+let audioEnabled = false;
+let lastSpokenText = '';
+let koreanVoices = [];
+
+function loadVoices(){
+  koreanVoices = speechSynthesis.getVoices().filter(v=>v.lang && v.lang.startsWith('ko'));
+}
+if ('speechSynthesis' in window){
+  loadVoices();
+  speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+document.getElementById('voiceToggle').addEventListener('click', ()=>{
+  audioEnabled = !audioEnabled;
+  const btn = document.getElementById('voiceToggle');
+  if (audioEnabled){
+    // 사용자 탭 시점에 빈 발화를 한 번 재생해 브라우저 자동재생 제한을 해제
+    const unlock = new SpeechSynthesisUtterance(' ');
+    speechSynthesis.speak(unlock);
+    btn.textContent = '🔊 음성 켜짐';
+    btn.classList.add('on');
+  } else {
+    speechSynthesis.cancel();
+    btn.textContent = '🔇 음성 켜기 (탭 한 번 필요)';
+    btn.classList.remove('on');
+  }
+});
+
+function speak(text){
+  if (!audioEnabled || !('speechSynthesis' in window)) return;
+  if (!text || text === lastSpokenText) return;
+  lastSpokenText = text;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ko-KR';
+  const persona = JUDGES[mySeat] || {pitch:1, rate:1};
+  u.pitch = persona.pitch;
+  u.rate = persona.rate;
+  if (koreanVoices.length){
+    u.voice = koreanVoices[mySeat % koreanVoices.length];
+  }
+  speechSynthesis.speak(u);
+}
+
+const params = new URLSearchParams(location.search);
+let mySeat = null;
+if (params.has('seat')) mySeat = parseInt(params.get('seat')) - 1;
+else if (localStorage.getItem('myJudgeSeat') !== null) mySeat = parseInt(localStorage.getItem('myJudgeSeat'));
+
+const setupScreen = document.getElementById('setupScreen');
+const seatScreen = document.getElementById('seatScreen');
+
+function activateSeat(idx){
+  mySeat = idx;
+  localStorage.setItem('myJudgeSeat', idx);
+  setupScreen.style.display = 'none';
+  seatScreen.style.display = 'block';
+  document.getElementById('seatTag').textContent = 'SEAT ' + (idx+1);
+  document.getElementById('judgeName').textContent = JUDGES[idx].name;
+  document.getElementById('judgeRole').textContent = JUDGES[idx].role;
+  poll();
+  setInterval(poll, 1500);
+}
+
+document.getElementById('confirmSeat').addEventListener('click', ()=>{
+  activateSeat(parseInt(document.getElementById('seatSelect').value));
+});
+
+if (mySeat !== null && mySeat >= 0 && mySeat < JUDGES.length){
+  activateSeat(mySeat);
+}
+
+// ⚠️ 여기에 Apps Script 배포 후 나온 웹 앱 URL을 붙여넣으세요 (끝에 /exec 까지 포함)
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypU3VuidcBYPsyErbVYOFT8x6H1teHYLVCszE2p7dMA6rPow3doz2GvAkjVn2PzQUuRA/exec';
+
+let jsonpCounter = 0;
+function jsonpRequest(params){
+  return new Promise((resolve, reject)=>{
+    const cbName = 'jsonp_cb_' + (jsonpCounter++) + '_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(()=>{ cleanup(); reject(new Error('요청 시간 초과')); }, 15000);
+    function cleanup(){ clearTimeout(timeout); delete window[cbName]; script.remove(); }
+    window[cbName] = (data)=>{
+      cleanup();
+      if (data && data.error) reject(new Error(data.error));
+      else resolve(data);
+    };
+    const qs = new URLSearchParams(Object.assign({}, params, {callback: cbName})).toString();
+    script.src = APPS_SCRIPT_URL + '?' + qs;
+    script.onerror = ()=>{ cleanup(); reject(new Error('네트워크 오류 — APPS_SCRIPT_URL을 확인하세요')); };
+    document.body.appendChild(script);
+  });
+}
+
+let lastUpdatedAt = 0;
+
+async function poll(){
+  const connBadge = document.getElementById('connBadge');
+  const connText = document.getElementById('connText');
+  let res;
+  try{
+    res = await jsonpRequest({action:'read'});
+  }catch(e){
+    connBadge.className = 'badge err';
+    connText.textContent = '연결 실패';
+    return;
+  }
+  connBadge.className = 'badge ok';
+  connText.textContent = '연결됨';
+  if (!res || !res.state) return;
+  let data;
+  try{ data = JSON.parse(res.state); }catch(e){ return; }
+  if (!data || data.updatedAt === lastUpdatedAt) return;
+  lastUpdatedAt = data.updatedAt;
+  render(data);
+}
+
+function render(data){
+  const card = seatScreen;
+  const commentBox = document.getElementById('commentBox');
+  const verdictBanner = document.getElementById('verdictBanner');
+  const mcBanner = document.getElementById('mcBanner');
+  verdictBanner.style.display = 'none';
+
+  if (data.mc && data.mc.text){
+    mcBanner.style.display = 'block';
+    mcBanner.textContent = 'MC ' + data.mc.name + ': ' + data.mc.text;
+  } else {
+    mcBanner.style.display = 'none';
+  }
+
+  const mine = (data.comments||[]).find(c=>c.seat===mySeat);
+  const speaking = data.speakingSeats || [0,1,2,3,4,5,6];
+  const iAmSpeakingThisRound = speaking.includes(mySeat);
+
+  if (data.status === 'idle' || !data.status){
+    card.classList.remove('speaking');
+    commentBox.className = 'comment waiting';
+    commentBox.textContent = '무대를 기다리는 중...';
+  } else if (data.status === 'recording'){
+    card.classList.remove('speaking');
+    commentBox.className = 'comment waiting';
+    commentBox.textContent = '지금 무대가 진행 중입니다...';
+  } else if (data.status === 'ready'){
+    card.classList.remove('speaking');
+    commentBox.className = 'comment waiting';
+    commentBox.textContent = '무대가 끝났습니다. 토론 시작을 기다리는 중...';
+  } else if (data.status === 'discussing' || data.status === 'done'){
+    if (!iAmSpeakingThisRound){
+      card.classList.remove('speaking');
+      commentBox.className = 'comment waiting';
+      commentBox.textContent = '이번 라운드는 쉬어갑니다';
+    } else if (mine){
+      card.classList.remove('speaking');
+      commentBox.className = 'comment';
+      commentBox.textContent = mine.text;
+      speak(mine.text);
+    } else if (data.currentSpeaker === mySeat){
+      card.classList.add('speaking');
+      commentBox.className = 'comment';
+      commentBox.innerHTML = '<span class="thinking"><span></span><span></span><span></span></span>';
+    } else {
+      card.classList.remove('speaking');
+      commentBox.className = 'comment waiting';
+      commentBox.textContent = '차례를 기다리는 중...';
+    }
+    if (data.status === 'done' && data.verdict){
+      verdictBanner.style.display = 'block';
+      verdictBanner.textContent = '종합 판정 ' + data.verdict.score + '점 — ' + data.verdict.summary;
+    }
+  }
+}
+</script>
+</body>
+</html>

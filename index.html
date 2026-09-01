@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 심사위원단</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-stage:#171310;
+    --bg-panel:#221C17;
+    --bg-panel-active:#2C241C;
+    --gold:#E3A83B;
+    --gold-dim:#8C6A2B;
+    --velvet:#8B2E2E;
+    --steel:#3E7CB1;
+    --text-main:#F1E9DA;
+    --text-dim:#B8AC98;
+    --line:#3A322A;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg-stage);
+    color:var(--text-main);
+    font-family:'Noto Sans KR',sans-serif;
+    padding:28px 20px 60px;
+  }
+  .wrap{max-width:1040px;margin:0 auto;}
+
+  .masthead{margin-bottom:28px;}
+  .eyebrow{color:var(--gold);font-size:13px;letter-spacing:2px;margin:0 0 6px;font-weight:700;}
+  h1{
+    font-family:'Black Han Sans',sans-serif;
+    font-size:clamp(32px,6vw,52px);
+    margin:0 0 8px;
+    line-height:1.05;
+    letter-spacing:1px;
+  }
+  .sub{color:var(--text-dim);font-size:15px;max-width:520px;line-height:1.6;margin:0;}
+
+  .deck{
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:22px;
+    margin-bottom:18px;
+  }
+  .deck-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px;}
+  .rec-btn{
+    font-family:'Black Han Sans',sans-serif;
+    font-size:18px;
+    letter-spacing:1px;
+    background:var(--velvet);
+    color:#fff;
+    border:none;
+    border-radius:3px;
+    padding:14px 26px;
+    cursor:pointer;
+    transition:transform .12s ease, background .2s ease;
+  }
+  .rec-btn:hover{transform:translateY(-1px);}
+  .rec-btn.recording{background:var(--steel);}
+  .rec-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .status-dot{
+    width:10px;height:10px;border-radius:50%;background:var(--line);display:inline-block;margin-right:8px;
+  }
+  .status-dot.live{background:#E24444;box-shadow:0 0 8px #E24444;animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .status-text{font-size:14px;color:var(--text-dim);}
+  .timer{font-family:'Black Han Sans',sans-serif;font-size:20px;color:var(--gold);margin-left:auto;}
+
+  canvas#wave{width:100%;height:70px;display:block;background:#0F0C0A;border-radius:3px;border:1px solid var(--line);}
+
+  .fallback{
+    margin-top:16px;padding-top:16px;border-top:1px dashed var(--line);
+    display:none;
+  }
+  .fallback.show{display:block;}
+  .fallback p{font-size:13px;color:var(--text-dim);margin:0 0 10px;}
+  .fallback textarea{
+    width:100%;min-height:70px;background:#0F0C0A;border:1px solid var(--line);color:var(--text-main);
+    border-radius:3px;padding:10px;font-family:'Noto Sans KR',sans-serif;font-size:14px;resize:vertical;
+  }
+  .slider-row{display:flex;gap:24px;margin-top:12px;flex-wrap:wrap;}
+  .slider-group{flex:1;min-width:180px;}
+  .slider-group label{font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;}
+  .slider-group input[type=range]{width:100%;}
+  .slider-group .val{color:var(--gold);font-weight:700;font-size:13px;}
+  .toggle-fallback{
+    background:none;border:1px solid var(--line);color:var(--text-dim);font-size:12px;
+    padding:6px 12px;border-radius:3px;cursor:pointer;margin-top:12px;
+  }
+
+  .metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+  .metric{
+    background:var(--bg-panel);border:1px solid var(--line);border-radius:4px;padding:16px;
+  }
+  .metric .label{font-size:12px;color:var(--text-dim);margin-bottom:8px;}
+  .metric .value{font-family:'Black Han Sans',sans-serif;font-size:34px;color:var(--gold);line-height:1;}
+  .metric .bar{height:5px;background:var(--line);border-radius:3px;margin-top:10px;overflow:hidden;}
+  .metric .bar-fill{height:100%;background:var(--gold);width:0%;transition:width .6s ease;}
+  .note{font-size:11px;color:var(--text-dim);margin:-8px 0 18px;}
+
+  .lyrics-box{
+    background:var(--bg-panel);border:1px solid var(--line);border-radius:4px;padding:16px 18px;margin-bottom:24px;
+    font-size:14px;line-height:1.7;color:var(--text-main);min-height:26px;
+  }
+  .lyrics-box .label{font-size:12px;color:var(--text-dim);margin-bottom:8px;}
+
+  .grid-title{font-family:'Black Han Sans',sans-serif;font-size:22px;margin:0 0 14px;letter-spacing:.5px;}
+  .judge-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;
+  }
+  @media(max-width:760px){.judge-grid{grid-template-columns:repeat(2,1fr);}}
+  .judge{
+    background:var(--bg-panel);border:1px solid var(--line);border-radius:4px;padding:14px;
+    min-height:150px;display:flex;flex-direction:column;transition:background .3s ease, border-color .3s ease;
+  }
+  .judge.speaking{border-color:var(--gold);background:var(--bg-panel-active);}
+  .judge .seat-no{font-family:'Black Han Sans',sans-serif;color:var(--gold-dim);font-size:12px;}
+  .judge .name{font-weight:700;font-size:14px;margin:2px 0 1px;}
+  .judge .role{font-size:11px;color:var(--text-dim);margin-bottom:8px;}
+  .judge .comment{font-size:12.5px;line-height:1.55;color:var(--text-main);flex:1;}
+  .judge .comment.waiting{color:var(--text-dim);font-style:italic;}
+  .judge .thinking{display:inline-flex;gap:3px;}
+  .judge .thinking span{width:4px;height:4px;background:var(--text-dim);border-radius:50%;animation:blink 1.2s infinite;}
+  .judge .thinking span:nth-child(2){animation-delay:.2s;}
+  .judge .thinking span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,80%,100%{opacity:.2;}40%{opacity:1;}}
+
+  .discuss-btn{
+    font-family:'Black Han Sans',sans-serif;font-size:17px;letter-spacing:1px;
+    background:var(--gold);color:#171310;border:none;border-radius:3px;padding:14px 28px;
+    cursor:pointer;width:100%;margin-bottom:24px;
+  }
+  .discuss-btn:disabled{opacity:.35;cursor:not-allowed;}
+
+  .verdict{
+    display:none;background:linear-gradient(180deg,#241D15,#1B160F);border:1px solid var(--gold-dim);
+    border-radius:4px;padding:24px;
+  }
+  .verdict.show{display:block;}
+  .verdict .label{font-size:12px;color:var(--gold);letter-spacing:1.5px;margin-bottom:6px;}
+  .verdict .score{font-family:'Black Han Sans',sans-serif;font-size:48px;color:var(--gold);line-height:1;}
+  .verdict .summary{font-size:14px;line-height:1.7;margin-top:12px;color:var(--text-main);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <p class="eyebrow">AI JUDGE PANEL — PROTOTYPE</p>
+    <h1>AI 심사위원단</h1>
+    <p class="sub">가수의 무대가 끝나면, 진행자와 AI 심사위원 7인이 실시간 음정·박자 데이터와 가사를 근거로 서로의 의견을 듣고 토론합니다.</p>
+  </div>
+
+  <div class="deck">
+    <div class="deck-top">
+      <button class="rec-btn" id="recBtn">● 무대 녹음 시작</button>
+      <span><span class="status-dot" id="statusDot"></span><span class="status-text" id="statusText">대기 중</span></span>
+      <span class="timer" id="timer">00:00</span>
+    </div>
+    <canvas id="wave" width="1000" height="70"></canvas>
+
+    <button class="toggle-fallback" id="toggleFallback">마이크/음성인식 없이 수동으로 입력하기</button>
+    <div class="fallback" id="fallbackBox">
+      <p>마이크 접근이 안 되거나 음성인식이 지원되지 않는 환경(또는 PD가 직접 값을 넣고 싶을 때)을 위한 수동 입력입니다.</p>
+      <textarea id="manualLyrics" placeholder="가사 텍스트를 직접 붙여넣으세요..."></textarea>
+      <div class="slider-row">
+        <div class="slider-group">
+          <label>음정 안정도 <span class="val" id="manualPitchVal">70</span></label>
+          <input type="range" id="manualPitch" min="0" max="100" value="70">
+        </div>
+        <div class="slider-group">
+          <label>박자 정확도 <span class="val" id="manualRhythmVal">70</span></label>
+          <input type="range" id="manualRhythm" min="0" max="100" value="70">
+        </div>
+        <div class="slider-group">
+          <label>다이내믹스/표현력 <span class="val" id="manualDynVal">70</span></label>
+          <input type="range" id="manualDyn" min="0" max="100" value="70">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="metrics-row">
+    <div class="metric">
+      <div class="label">음정 안정도</div>
+      <div class="value" id="mPitch">–</div>
+      <div class="bar"><div class="bar-fill" id="mPitchBar"></div></div>
+    </div>
+    <div class="metric">
+      <div class="label">박자 정확도</div>
+      <div class="value" id="mRhythm">–</div>
+      <div class="bar"><div class="bar-fill" id="mRhythmBar"></div></div>
+    </div>
+    <div class="metric">
+      <div class="label">다이내믹스</div>
+      <div class="value" id="mDyn">–</div>
+      <div class="bar"><div class="bar-fill" id="mDynBar"></div></div>
+    </div>
+  </div>
+  <p class="note">※ 브라우저 자기상관(autocorrelation) 기반 실시간 근사치입니다. 방송 송출용 정확도가 아닌 프로토타입 지표입니다.</p>
+
+  <div class="lyrics-box">
+    <div class="label">인식된 가사</div>
+    <div id="lyricsText">아직 녹음된 내용이 없습니다.</div>
+  </div>
+
+  <div class="lyrics-box" id="mcBox" style="display:none;">
+    <div class="label">진행자 강한결 (MC)</div>
+    <div id="mcComment"></div>
+  </div>
+
+  <h2 class="grid-title">심사위원 7인 (이번 라운드는 1~3번이 대화합니다)</h2>
+  <div class="judge-grid" id="judgeGrid"></div>
+
+  <button class="discuss-btn" id="discussBtn" disabled>먼저 무대를 녹음(또는 수동 입력)하세요</button>
+
+  <div class="verdict" id="verdict">
+    <div class="label">종합 판정</div>
+    <div class="score" id="verdictScore">–</div>
+    <div class="summary" id="verdictSummary"></div>
+  </div>
+
+</div>
+
+<script>
+const JUDGES = [
+  {name:"故 임춘앵", role:"원로 트로트 명인 · 무대 매너", tone:"연륜있고 단호하지만 애정이 담긴 어투. 무대 장악력과 관객 호응을 중시."},
+  {name:"한서율", role:"보컬 트레이너 · 발성 전문가", tone:"기술적이고 분석적. 음정 데이터와 발성 디테일을 근거로 말함."},
+  {name:"비트마스터 그루브", role:"힙합 프로듀서 · 리듬감", tone:"박자 그루브와 시대감각을 중시. 캐주얼하고 직설적인 어투."},
+  {name:"윤서하", role:"발라드 가수 출신 · 감정선", tone:"가사 전달력과 감정 몰입을 중시. 서정적이고 따뜻한 어투."},
+  {name:"강필도", role:"냉철한 음악평론가", tone:"객관적이고 비판적. 장단점을 명확히 구분해서 짚음."},
+  {name:"뿅뿅이", role:"예능 감초 심사위원", tone:"위트있고 유쾌하지만 핵심 평가는 놓치지 않음."},
+  {name:"직캠러 지수", role:"팬 대표 · 대중 반응", tone:"대중이 실제로 어떻게 느낄지, 화제성 관점에서 말함."}
+];
+const HOST = {name:"진행자 강한결", role:"프로그램 MC · 전체 분위기 진행", tone:"활기차고 따뜻하게 무대 직후 분위기를 먼저 짚어주는 어투. 심사위원들의 토론 물꼬를 트는 역할."};
+const SPEAKING_SEATS = [0,1,2]; // 이번 라운드에 실제로 발언하는 심사위원 인덱스 (1,2,3번)
+
+let els = {
+  recBtn: document.getElementById('recBtn'),
+  statusDot: document.getElementById('statusDot'),
+  statusText: document.getElementById('statusText'),
+  timer: document.getElementById('timer'),
+  wave: document.getElementById('wave'),
+  toggleFallback: document.getElementById('toggleFallback'),
+  fallbackBox: document.getElementById('fallbackBox'),
+  manualLyrics: document.getElementById('manualLyrics'),
+  manualPitch: document.getElementById('manualPitch'),
+  manualRhythm: document.getElementById('manualRhythm'),
+  manualDyn: document.getElementById('manualDyn'),
+  manualPitchVal: document.getElementById('manualPitchVal'),
+  manualRhythmVal: document.getElementById('manualRhythmVal'),
+  manualDynVal: document.getElementById('manualDynVal'),
+  mPitch: document.getElementById('mPitch'), mPitchBar: document.getElementById('mPitchBar'),
+  mRhythm: document.getElementById('mRhythm'), mRhythmBar: document.getElementById('mRhythmBar'),
+  mDyn: document.getElementById('mDyn'), mDynBar: document.getElementById('mDynBar'),
+  lyricsText: document.getElementById('lyricsText'),
+  judgeGrid: document.getElementById('judgeGrid'),
+  discussBtn: document.getElementById('discussBtn'),
+  verdict: document.getElementById('verdict'),
+  verdictScore: document.getElementById('verdictScore'),
+  verdictSummary: document.getElementById('verdictSummary')
+};
+
+// build judge cards
+JUDGES.forEach((j,i)=>{
+  const div = document.createElement('div');
+  div.className='judge';
+  div.id='judge-'+i;
+  div.innerHTML = `
+    <div class="seat-no">SEAT ${i+1}</div>
+    <div class="name">${j.name}</div>
+    <div class="role">${j.role}</div>
+    <div class="comment waiting" id="comment-${i}">대기 중</div>
+  `;
+  els.judgeGrid.appendChild(div);
+});
+
+['manualPitch','manualRhythm','manualDyn'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', e=>{
+    document.getElementById(id+'Val').textContent = e.target.value;
+  });
+});
+
+els.toggleFallback.addEventListener('click', ()=>{
+  els.fallbackBox.classList.toggle('show');
+});
+
+let state = {
+  recording:false,
+  audioCtx:null, analyser:null, stream:null,
+  pitchSamples:[], rmsSamples:[], startTime:0, rafId:null, timerId:null,
+  finalTranscript:'', recognition:null,
+  metrics:null,
+  comments:[], currentSpeaker:-1, status:'idle', verdict:null, mc:null
+};
+
+// ⚠️ 여기에 Apps Script 배포 후 나온 웹 앱 URL을 붙여넣으세요 (끝에 /exec 까지 포함)
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypU3VuidcBYPsyErbVYOFT8x6H1teHYLVCszE2p7dMA6rPow3doz2GvAkjVn2PzQUuRA/exec';
+
+let jsonpCounter = 0;
+function jsonpRequest(params){
+  return new Promise((resolve, reject)=>{
+    const cbName = 'jsonp_cb_' + (jsonpCounter++) + '_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(()=>{ cleanup(); reject(new Error('요청 시간 초과')); }, 15000);
+    function cleanup(){ clearTimeout(timeout); delete window[cbName]; script.remove(); }
+    window[cbName] = (data)=>{
+      cleanup();
+      if (data && data.error) reject(new Error(data.error));
+      else resolve(data);
+    };
+    const qs = new URLSearchParams(Object.assign({}, params, {callback: cbName})).toString();
+    script.src = APPS_SCRIPT_URL + '?' + qs;
+    script.onerror = ()=>{ cleanup(); reject(new Error('네트워크 오류 — APPS_SCRIPT_URL을 확인하세요')); };
+    document.body.appendChild(script);
+  });
+}
+
+async function saveState(){
+  try{
+    await jsonpRequest({
+      action: 'write',
+      data: JSON.stringify({
+        lyrics: els.lyricsText.textContent,
+        metrics: state.metrics,
+        comments: state.comments,
+        currentSpeaker: state.currentSpeaker,
+        status: state.status,
+        verdict: state.verdict,
+        mc: state.mc,
+        speakingSeats: SPEAKING_SEATS,
+        updatedAt: Date.now()
+      })
+    });
+  }catch(e){ console.warn('공유 저장 실패', e); }
+}
+
+function autoCorrelate(buf, sampleRate){
+  let SIZE = buf.length;
+  let rms = 0;
+  for (let i=0;i<SIZE;i++){ rms += buf[i]*buf[i]; }
+  rms = Math.sqrt(rms/SIZE);
+  if (rms < 0.01) return -1;
+  let r1=0, r2=SIZE-1, thres=0.2;
+  for (let i=0;i<SIZE/2;i++){ if (Math.abs(buf[i])<thres){ r1=i; break; } }
+  for (let i=1;i<SIZE/2;i++){ if (Math.abs(buf[SIZE-i])<thres){ r2=SIZE-i; break; } }
+  let trimmed = buf.slice(r1,r2);
+  let n = trimmed.length;
+  if (n < 8) return -1;
+  let c = new Float32Array(n);
+  for (let i=0;i<n;i++){
+    let sum=0;
+    for (let j=0;j<n-i;j++){ sum += trimmed[j]*trimmed[j+i]; }
+    c[i]=sum;
+  }
+  let d=0; while (d<n-1 && c[d]>c[d+1]) d++;
+  let maxval=-1, maxpos=-1;
+  for (let i=d;i<n;i++){ if (c[i]>maxval){ maxval=c[i]; maxpos=i; } }
+  if (maxpos<=0) return -1;
+  let T0=maxpos;
+  let x1=c[T0-1]||c[T0], x2=c[T0], x3=c[T0+1]||c[T0];
+  let a=(x1+x3-2*x2)/2, b=(x3-x1)/2;
+  if (a) T0 = T0 - b/(2*a);
+  let freq = sampleRate/T0;
+  if (freq < 60 || freq > 1200) return -1;
+  return freq;
+}
+
+function drawWave(dataArray){
+  const ctx = els.wave.getContext('2d');
+  const w = els.wave.width, h = els.wave.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle = '#E3A83B';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  const step = w / dataArray.length;
+  for (let i=0;i<dataArray.length;i++){
+    const x = i*step;
+    const y = h/2 + dataArray[i]*h/2;
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+}
+
+async function startRecording(){
+  try{
+    state.stream = await navigator.mediaDevices.getUserMedia({audio:true});
+  }catch(e){
+    els.statusText.textContent = '마이크 접근 실패 — 아래 수동 입력을 사용하세요';
+    els.fallbackBox.classList.add('show');
+    return;
+  }
+  state.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  const src = state.audioCtx.createMediaStreamSource(state.stream);
+  state.analyser = state.audioCtx.createAnalyser();
+  state.analyser.fftSize = 1024;
+  src.connect(state.analyser);
+
+  state.pitchSamples = [];
+  state.rmsSamples = [];
+  state.finalTranscript = '';
+  state.recording = true;
+  state.startTime = Date.now();
+  els.recBtn.textContent = '■ 녹음 종료';
+  els.recBtn.classList.add('recording');
+  els.statusDot.classList.add('live');
+  els.statusText.textContent = '녹음 중';
+  els.lyricsText.textContent = '(듣는 중...)';
+  state.status = 'recording';
+  state.comments = [];
+  state.currentSpeaker = -1;
+  state.verdict = null;
+  saveState();
+
+  state.timerId = setInterval(()=>{
+    const s = Math.floor((Date.now()-state.startTime)/1000);
+    const mm = String(Math.floor(s/60)).padStart(2,'0');
+    const ss = String(s%60).padStart(2,'0');
+    els.timer.textContent = mm+':'+ss;
+  },250);
+
+  const buf = new Float32Array(state.analyser.fftSize);
+  let lastPitchSample = 0;
+  function loop(){
+    if (!state.recording) return;
+    state.analyser.getFloatTimeDomainData(buf);
+    drawWave(buf);
+    let rms=0; for(let i=0;i<buf.length;i++) rms+=buf[i]*buf[i];
+    rms = Math.sqrt(rms/buf.length);
+    state.rmsSamples.push({t:Date.now()-state.startTime, rms});
+    const now = Date.now();
+    if (now - lastPitchSample > 150){
+      lastPitchSample = now;
+      const freq = autoCorrelate(buf, state.audioCtx.sampleRate);
+      if (freq > 0) state.pitchSamples.push({t:now-state.startTime, freq});
+    }
+    state.rafId = requestAnimationFrame(loop);
+  }
+  loop();
+
+  // speech recognition
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR){
+    state.recognition = new SR();
+    state.recognition.lang = 'ko-KR';
+    state.recognition.continuous = true;
+    state.recognition.interimResults = true;
+    state.recognition.onresult = (ev)=>{
+      let interim='';
+      for (let i=ev.resultIndex;i<ev.results.length;i++){
+        if (ev.results[i].isFinal) state.finalTranscript += ev.results[i][0].transcript + ' ';
+        else interim += ev.results[i][0].transcript;
+      }
+      els.lyricsText.textContent = (state.finalTranscript + interim).trim() || '(듣는 중...)';
+    };
+    state.recognition.onerror = ()=>{};
+    try{ state.recognition.start(); }catch(e){}
+  } else {
+    els.lyricsText.textContent = '(이 브라우저는 음성인식을 지원하지 않습니다 — 수동 입력을 사용하세요)';
+    els.fallbackBox.classList.add('show');
+  }
+}
+
+function median(arr){
+  const s = [...arr].sort((a,b)=>a-b);
+  const mid = Math.floor(s.length/2);
+  return s.length%2 ? s[mid] : (s[mid-1]+s[mid])/2;
+}
+function stddev(arr){
+  if (arr.length<2) return 0;
+  const m = arr.reduce((a,b)=>a+b,0)/arr.length;
+  const v = arr.reduce((a,b)=>a+(b-m)*(b-m),0)/arr.length;
+  return Math.sqrt(v);
+}
+function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+
+function computeMetrics(){
+  // pitch stability: frame-to-frame jitter in cents (lower jitter = more stable)
+  let pitchScore = 50;
+  const freqs = state.pitchSamples.map(p=>p.freq);
+  if (freqs.length > 4){
+    const deltas = [];
+    for (let i=1;i<freqs.length;i++){
+      deltas.push(1200*Math.log2(freqs[i]/freqs[i-1]));
+    }
+    const jitter = stddev(deltas);
+    pitchScore = clamp(100 - jitter*2.2, 5, 98);
+  }
+
+  // rhythm: onset regularity from rms envelope peaks
+  let rhythmScore = 50;
+  const rmsArr = state.rmsSamples;
+  if (rmsArr.length > 10){
+    const onsets = [];
+    let lastOnset = -9999;
+    const threshold = Math.max(0.02, median(rmsArr.map(r=>r.rms))*1.4);
+    for (let i=1;i<rmsArr.length-1;i++){
+      if (rmsArr[i].rms > threshold && rmsArr[i].rms > rmsArr[i-1].rms && rmsArr[i].rms >= rmsArr[i+1].rms){
+        if (rmsArr[i].t - lastOnset > 180){
+          onsets.push(rmsArr[i].t);
+          lastOnset = rmsArr[i].t;
+        }
+      }
+    }
+    if (onsets.length > 3){
+      const iois = [];
+      for (let i=1;i<onsets.length;i++) iois.push(onsets[i]-onsets[i-1]);
+      const mean = iois.reduce((a,b)=>a+b,0)/iois.length;
+      const cv = stddev(iois)/mean;
+      rhythmScore = clamp(100 - cv*140, 5, 98);
+    }
+  }
+
+  // dynamics: range of rms mapped to a score
+  let dynScore = 50;
+  if (rmsArr.length > 10){
+    const vals = rmsArr.map(r=>r.rms);
+    const range = Math.max(...vals) - Math.min(...vals);
+    dynScore = clamp(range*600, 5, 98);
+  }
+
+  return {pitch:Math.round(pitchScore), rhythm:Math.round(rhythmScore), dyn:Math.round(dynScore)};
+}
+
+function stopRecording(){
+  state.recording = false;
+  if (state.rafId) cancelAnimationFrame(state.rafId);
+  if (state.timerId) clearInterval(state.timerId);
+  if (state.recognition){ try{ state.recognition.stop(); }catch(e){} }
+  if (state.stream){ state.stream.getTracks().forEach(t=>t.stop()); }
+  if (state.audioCtx){ state.audioCtx.close(); }
+
+  els.recBtn.textContent = '● 무대 녹음 시작';
+  els.recBtn.classList.remove('recording');
+  els.statusDot.classList.remove('live');
+  els.statusText.textContent = '녹음 완료';
+
+  const auto = computeMetrics();
+  applyMetrics(auto);
+  if (state.finalTranscript.trim()){
+    els.lyricsText.textContent = state.finalTranscript.trim();
+  } else if (!els.manualLyrics.value.trim()) {
+    els.lyricsText.textContent = '(가사가 인식되지 않았습니다 — 수동 입력을 사용하세요)';
+  }
+  els.discussBtn.disabled = false;
+  els.discussBtn.textContent = '심사위원단 토론 시작';
+  state.status = 'ready';
+  state.comments = [];
+  state.currentSpeaker = -1;
+  state.verdict = null;
+  saveState();
+}
+
+function applyMetrics(m){
+  state.metrics = m;
+  els.mPitch.textContent = m.pitch;
+  els.mPitchBar.style.width = m.pitch+'%';
+  els.mRhythm.textContent = m.rhythm;
+  els.mRhythmBar.style.width = m.rhythm+'%';
+  els.mDyn.textContent = m.dyn;
+  els.mDynBar.style.width = m.dyn+'%';
+}
+
+els.recBtn.addEventListener('click', ()=>{
+  if (!state.recording) startRecording();
+  else stopRecording();
+});
+
+// allow manual mode to directly feed metrics/lyrics if user prefers it
+function useManualIfFilled(){
+  const manualFilled = els.manualLyrics.value.trim().length>0;
+  if (manualFilled){
+    applyMetrics({
+      pitch: parseInt(els.manualPitch.value),
+      rhythm: parseInt(els.manualRhythm.value),
+      dyn: parseInt(els.manualDyn.value)
+    });
+    els.lyricsText.textContent = els.manualLyrics.value.trim();
+    els.discussBtn.disabled = false;
+    els.discussBtn.textContent = '심사위원단 토론 시작';
+    state.status = 'ready';
+    state.comments = [];
+    state.currentSpeaker = -1;
+    state.verdict = null;
+    saveState();
+    return true;
+  }
+  return false;
+}
+els.manualLyrics.addEventListener('input', useManualIfFilled);
+[els.manualPitch, els.manualRhythm, els.manualDyn].forEach(s=>{
+  s.addEventListener('input', ()=>{ if (els.manualLyrics.value.trim()) useManualIfFilled(); });
+});
+
+async function callClaude(systemPrompt, userPrompt){
+  const res = await jsonpRequest({action:'judge', system: systemPrompt, user: userPrompt});
+  return (res && res.text) ? res.text : '(응답 없음)';
+}
+
+async function runDiscussion(){
+  els.discussBtn.disabled = true;
+  els.discussBtn.textContent = '토론 진행 중...';
+  els.verdict.classList.remove('show');
+  state.status = 'discussing';
+  state.comments = [];
+  state.mc = null;
+
+  const lyrics = els.lyricsText.textContent;
+  const m = state.metrics || {pitch:50,rhythm:50,dyn:50};
+
+  // 4~7번(비참여) 심사위원은 이번 라운드 휴식 표시
+  JUDGES.forEach((j,i)=>{
+    if (!SPEAKING_SEATS.includes(i)){
+      const commentEl = document.getElementById('comment-'+i);
+      commentEl.classList.add('waiting');
+      commentEl.textContent = '이번 라운드는 쉬어갑니다';
+    }
+  });
+
+  const priorComments = [];
+
+  // 1) 진행자(MC) 오프닝 코멘트
+  document.getElementById('mcBox').style.display = 'block';
+  document.getElementById('mcComment').innerHTML = '<span class="thinking"><span></span><span></span><span></span></span>';
+  const mcSystem = `당신은 오디션 방송의 진행자 "${HOST.name}"입니다. 역할: ${HOST.role}. 말투: ${HOST.tone}
+참가자의 무대가 막 끝났습니다. 심사위원들이 평가를 시작하기 전에, 무대 직후 분위기와 반응을 2~3문장으로 먼저 짚어주세요. 방송 자막처럼 간결하게 한국어로 답하세요. 점수를 말할 필요는 없습니다.`;
+  const mcUser = `[무대 데이터]\n음정 안정도: ${m.pitch}/100\n박자 정확도: ${m.rhythm}/100\n다이내믹스: ${m.dyn}/100\n인식된 가사: "${lyrics}"\n당신이 가장 먼저 말합니다.`;
+  let mcText;
+  try{ mcText = await callClaude(mcSystem, mcUser); }
+  catch(e){ mcText = '(API 호출 오류)'; }
+  document.getElementById('mcComment').textContent = mcText;
+  priorComments.push({name:HOST.name, text:mcText});
+  state.mc = {name:HOST.name, text:mcText};
+  saveState();
+
+  // 2) 심사위원 1~3번 순서대로 발언 (앞선 발언 모두 참고)
+  for (const i of SPEAKING_SEATS){
+    const j = JUDGES[i];
+    const card = document.getElementById('judge-'+i);
+    const commentEl = document.getElementById('comment-'+i);
+    card.classList.add('speaking');
+    commentEl.classList.remove('waiting');
+    commentEl.innerHTML = '<span class="thinking"><span></span><span></span><span></span></span>';
+    state.currentSpeaker = i;
+    saveState();
+
+    const system = `당신은 오디션 방송의 심사위원 "${j.name}"입니다. 역할: ${j.role}. 말투: ${j.tone}
+지금 막 한 참가자의 무대가 끝났고, 다른 심사위원들과 함께 실시간으로 평가 의견을 나누는 상황입니다.
+아래 데이터를 참고해 2~3문장으로 짧고 자연스럽게 코멘트하세요. 방송 자막처럼 간결하게, 한국어로 답하세요.
+이전 심사위원들이 이미 발언했다면, 그 의견에 짧게 반응(동의/반박/보완)한 뒤 본인 관점을 더하세요. 점수(숫자)를 굳이 말할 필요는 없습니다.`;
+
+    let userMsg = `[무대 데이터]\n음정 안정도: ${m.pitch}/100\n박자 정확도: ${m.rhythm}/100\n다이내믹스: ${m.dyn}/100\n인식된 가사: "${lyrics}"\n`;
+    if (priorComments.length){
+      userMsg += `\n[이전 발언자들의 코멘트]\n` + priorComments.map(c=>`- ${c.name}: ${c.text}`).join('\n');
+    } else {
+      userMsg += `\n당신이 첫 번째로 발언합니다.`;
+    }
+
+    let text;
+    try{
+      text = await callClaude(system, userMsg);
+    }catch(e){
+      text = '(API 호출 오류 — 네트워크 또는 권한을 확인하세요)';
+    }
+    commentEl.textContent = text;
+    priorComments.push({name:j.name, text});
+    state.comments.push({seat:i, name:j.name, role:j.role, text});
+    state.currentSpeaker = -1;
+    saveState();
+    card.classList.remove('speaking');
+    await new Promise(r=>setTimeout(r, 250));
+  }
+
+  // final verdict
+  const verdictSystem = `당신은 이 오디션 프로그램의 총괄 MC입니다. 진행자와 심사위원 3인의 코멘트를 종합해
+1) 0~100 사이의 종합 점수 하나
+2) 3~4문장의 총평
+을 만드세요. 반드시 아래 JSON 형식으로만 답하세요. 다른 텍스트는 절대 포함하지 마세요.
+{"score": 숫자, "summary": "총평 문자열"}`;
+  const verdictUser = `[진행자·심사위원 코멘트]\n` + priorComments.map(c=>`- ${c.name}: ${c.text}`).join('\n') +
+    `\n\n[측정 데이터] 음정 ${m.pitch}, 박자 ${m.rhythm}, 다이내믹스 ${m.dyn}`;
+
+  let verdictData;
+  try{
+    const raw = await callClaude(verdictSystem, verdictUser);
+    const cleaned = raw.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(cleaned);
+    els.verdictScore.textContent = parsed.score;
+    els.verdictSummary.textContent = parsed.summary;
+    verdictData = parsed;
+  }catch(e){
+    const fallbackScore = Math.round((m.pitch+m.rhythm+m.dyn)/3);
+    const fallbackSummary = '(총평 생성 중 오류가 발생해 측정 데이터 평균으로 대체 표시했습니다.)';
+    els.verdictScore.textContent = fallbackScore;
+    els.verdictSummary.textContent = fallbackSummary;
+    verdictData = {score:fallbackScore, summary:fallbackSummary};
+  }
+  els.verdict.classList.add('show');
+  els.discussBtn.disabled = false;
+  els.discussBtn.textContent = '다시 토론하기';
+  state.status = 'done';
+  state.verdict = verdictData;
+  saveState();
+}
+
+els.discussBtn.addEventListener('click', runDiscussion);
+</script>
+</body>
+</html>
