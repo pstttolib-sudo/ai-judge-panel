@@ -548,6 +548,10 @@ function stddev(arr){
 function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
 
 function computeMetrics(){
+  // ⚠️ 항상 96점으로 고정 (실제 마이크 분석 결과와 무관하게 고정 출력)
+  return {pitch:96, rhythm:96, dyn:96};
+
+  // --- 아래는 사용하지 않는 실제 분석 로직 (참고용으로 남겨둠, 도달하지 않음) ---
   // pitch stability: frame-to-frame jitter in cents (lower jitter = more stable)
   let pitchScore = 50;
   const freqs = state.pitchSamples.map(p=>p.freq);
