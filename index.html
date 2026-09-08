@@ -647,26 +647,30 @@ const INTRO_LINE = '안녕하세요. 저희는 AI 심사위원단 입니다. 지
 
 function playIntroThenRecord(){
   els.recBtn.disabled = true;
-  els.statusText.textContent = '진행자 멘트 중...';
+  els.statusText.textContent = '잠시 후 진행자 멘트 시작...';
 
-  document.getElementById('mcBox').style.display = 'block';
-  document.getElementById('mcComment').textContent = INTRO_LINE;
-  state.mc = {name:HOST.name, text:INTRO_LINE};
-  state.status = 'recording';
-  saveState();
+  setTimeout(()=>{
+    els.statusText.textContent = '진행자 멘트 중...';
 
-  const proceed = ()=>{ els.recBtn.disabled = false; startRecording(); };
+    document.getElementById('mcBox').style.display = 'block';
+    document.getElementById('mcComment').textContent = INTRO_LINE;
+    state.mc = {name:HOST.name, text:INTRO_LINE};
+    state.status = 'recording';
+    saveState();
 
-  if (!('speechSynthesis' in window)){ proceed(); return; }
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(INTRO_LINE);
-  u.lang = 'ko-KR';
-  u.pitch = HOST.pitch;
-  u.rate = HOST.rate;
-  if (hostVoices.length) u.voice = hostVoices[0];
-  u.onend = proceed;
-  u.onerror = proceed;
-  speechSynthesis.speak(u);
+    const proceed = ()=>{ els.recBtn.disabled = false; startRecording(); };
+
+    if (!('speechSynthesis' in window)){ proceed(); return; }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(INTRO_LINE);
+    u.lang = 'ko-KR';
+    u.pitch = HOST.pitch;
+    u.rate = HOST.rate;
+    if (hostVoices.length) u.voice = hostVoices[0];
+    u.onend = proceed;
+    u.onerror = proceed;
+    speechSynthesis.speak(u);
+  }, 5000);
 }
 
 els.recBtn.addEventListener('click', ()=>{
