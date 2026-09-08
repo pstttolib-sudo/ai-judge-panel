@@ -631,6 +631,8 @@ function stopRecording(){
   state.currentSpeaker = -1;
   state.verdict = null;
   saveState();
+
+  runDiscussion(); // 녹음이 끝나면 자동으로 진행자 멘트 → 심사위원 토론 시작
 }
 
 function applyMetrics(m){
