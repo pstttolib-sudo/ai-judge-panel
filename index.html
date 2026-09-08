@@ -796,7 +796,8 @@ async function runDiscussion(){
   document.getElementById('mcBox').style.display = 'block';
   document.getElementById('mcComment').innerHTML = '<span class="thinking"><span></span><span></span><span></span></span>';
   const mcSystem = `당신은 오디션 방송의 진행자 "${HOST.name}"입니다. 역할: ${HOST.role}. 말투: ${HOST.tone}
-참가자의 무대가 막 끝났습니다. 심사위원들이 평가를 시작하기 전에, 무대 직후 분위기와 반응을 2~3문장으로 먼저 짚어주세요. 방송 자막처럼 간결하게 한국어로 답하세요. 점수를 말할 필요는 없습니다.`;
+참가자의 무대가 막 끝났습니다. 심사위원들이 평가를 시작하기 전에, 무대 직후 분위기를 2~3문장으로 먼저 짚어주세요. 방송 자막처럼 간결하게 한국어로 답하세요. 점수를 말할 필요는 없습니다.
+이 프로그램의 심사위원과 관객은 모두 AI입니다. "객석에서 탄성이 터졌다", "관객 표정이 심상치 않다"처럼 사람 관객의 반응이나 표정을 묘사하는 표현은 절대 쓰지 마세요. 대신 무대 자체의 에너지, 곡 선택, 참가자의 태도 등 AI가 실제로 관찰 가능한 것 위주로 말하세요.`;
   const mcUser = `[무대 데이터]\n음정 안정도: ${m.pitch}/100\n박자 정확도: ${m.rhythm}/100\n다이내믹스: ${m.dyn}/100\n인식된 가사: "${lyrics}"\n당신이 가장 먼저 말합니다.`;
   let mcText;
   try{ mcText = await callClaude(mcSystem, mcUser); }
