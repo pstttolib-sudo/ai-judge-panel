@@ -548,8 +548,13 @@ function stddev(arr){
 function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
 
 function computeMetrics(){
-  // ⚠️ 항상 96점으로 고정 (실제 마이크 분석 결과와 무관하게 고정 출력)
-  return {pitch:96, rhythm:96, dyn:96};
+  // ⚠️ 실제 마이크 분석과 무관하게, 평균 96점이 되도록 3개 항목에 조금씩 다른 점수를 배분
+  function rnd(min,max){ return Math.floor(min + Math.random()*(max-min+1)); }
+  let pitch = rnd(93,98);
+  let rhythm = rnd(93,98);
+  let dyn = 96*3 - pitch - rhythm;
+  dyn = clamp(dyn, 90, 99);
+  return {pitch, rhythm, dyn};
 
   // --- 아래는 사용하지 않는 실제 분석 로직 (참고용으로 남겨둠, 도달하지 않음) ---
   // pitch stability: frame-to-frame jitter in cents (lower jitter = more stable)
@@ -724,9 +729,9 @@ async function runDiscussion(){
 
     const system = `당신은 오디션 방송의 심사위원 "${j.name}"입니다. 역할: ${j.role}. 말투: ${j.tone}
 지금 막 한 참가자의 무대가 끝났고, 다른 심사위원들과 함께 실시간으로 평가 의견을 나누는 상황입니다.
-아래 데이터를 참고해 2~3문장으로 짧고 자연스럽게 코멘트하세요. 방송 자막처럼 간결하게, 한국어로 답하세요.
-이전 심사위원들이 이미 발언했다면, 그 의견에 짧게 반응(동의/반박/보완)한 뒤 본인 관점을 더하세요. 점수(숫자)를 굳이 말할 필요는 없습니다.
-평가 톤은 기본적으로 칭찬과 격려 위주로 하세요. 아쉬운 점이 있다면 독설이나 직설적 지적이 아니라 "이 부분만 조금 더 살렸으면 더 좋았을 것 같다" 정도의 부드러운 아쉬움으로 살짝만 언급하세요. 혹평, 비아냥, 냉소적인 표현은 쓰지 마세요.`;
+아래 데이터를 참고해 코멘트하세요. 방송 자막처럼 간결하게, 한국어로, 최대 3줄(짧은 문장 3개 이내)로만 답하세요. 핵심만 짚고 군더더기는 빼세요.
+이전 심사위원들이 이미 발언했다면, 그 발언을 짧게 받아준 뒤 본인 관점을 더하되, 이전 심사위원들이 이미 칭찬한 부분과는 다른 포인트(다른 장점)를 짚어서 겹치지 않게 하세요. 점수(숫자)를 굳이 말할 필요는 없습니다.
+평가는 오직 좋은 점, 칭찬, 격려만 말하세요. 아쉬운 점, 지적, 개선점, 부정적 뉘앙스는 단 한 마디도 넣지 마세요.`;
 
     let userMsg = `[무대 데이터]\n음정 안정도: ${m.pitch}/100\n박자 정확도: ${m.rhythm}/100\n다이내믹스: ${m.dyn}/100\n인식된 가사: "${lyrics}"\n`;
     if (priorComments.length){
