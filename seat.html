@@ -178,9 +178,21 @@ document.getElementById('voiceToggle').addEventListener('click', ()=>{
 });
 
 function speak(text, round){
-  if (!audioEnabled || !('speechSynthesis' in window)) return;
-  if (!text || text === lastSpokenText) return;
+  if (!text) return;
+
+  // 음성이 꺼져있거나 지원 안 되면 대기 없이 바로 텍스트 표시
+  if (!audioEnabled || !('speechSynthesis' in window)){
+    showCommentText(text);
+    return;
+  }
+  // 이미 이번에 말한 텍스트라면(재확인성 폴링) 텍스트만 표시
+  if (text === lastSpokenText){
+    showCommentText(text);
+    return;
+  }
+
   lastSpokenText = text;
+  showReactionView(); // 실제로 말하는 동안은 이모지 표시
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'ko-KR';
@@ -190,8 +202,8 @@ function speak(text, round){
   if (koreanVoices.length){
     u.voice = koreanVoices[mySeat % koreanVoices.length];
   }
-  u.onend = ()=>{ sendAck(round); };
-  u.onerror = ()=>{ sendAck(round); };
+  u.onend = ()=>{ sendAck(round); showCommentText(text); };
+  u.onerror = ()=>{ sendAck(round); showCommentText(text); };
   speechSynthesis.speak(u);
 }
 
@@ -271,30 +283,13 @@ function render(data){
   const commentBox = document.getElementById('commentBox');
   const verdictBanner = document.getElementById('verdictBanner');
   const mcBanner = document.getElementById('mcBanner');
-  const normalView = document.getElementById('normalView');
-  const reactionView = document.getElementById('reactionView');
   verdictBanner.style.display = 'none';
 
   if (data.status === 'recording'){
-    normalView.style.display = 'none';
-    reactionView.style.display = 'block';
-    if (!reactionInterval){
-      const emojiEl = document.getElementById('reactionEmoji');
-      const pair = REACTIONS[mySeat] || ['🎧','🙂'];
-      let idx = 0;
-      emojiEl.textContent = pair[0];
-      reactionInterval = setInterval(()=>{
-        idx = 1 - idx;
-        emojiEl.textContent = pair[idx];
-      }, 1200);
-    }
+    showReactionView();
     return; // 녹음 중에는 아래 일반 화면 로직을 건드리지 않음
-  } else if (reactionInterval){
-    clearInterval(reactionInterval);
-    reactionInterval = null;
   }
-  normalView.style.display = 'block';
-  reactionView.style.display = 'none';
+  showNormalView();
 
   if (data.mc && data.mc.text){
     mcBanner.style.display = 'block';
@@ -322,13 +317,10 @@ function render(data){
       commentBox.textContent = '이번 라운드는 쉬어갑니다';
     } else if (mine){
       card.classList.remove('speaking');
-      commentBox.className = 'comment';
-      commentBox.textContent = mine.text;
-      speak(mine.text, data.updatedAt);
+      speak(mine.text, data.updatedAt); // 음성 재생 중엔 이모지, 끝나면 자동으로 텍스트로 전환
     } else if (data.currentSpeaker === mySeat){
       card.classList.add('speaking');
-      commentBox.className = 'comment';
-      commentBox.innerHTML = '<span class="thinking"><span></span><span></span><span></span></span>';
+      showReactionView(); // 내 차례 시작 - 코멘트 생성 중에도 이모지로 표시
     } else {
       card.classList.remove('speaking');
       commentBox.className = 'comment waiting';
@@ -340,6 +332,38 @@ function render(data){
     }
   }
 }
+
+function showReactionView(){
+  document.getElementById('normalView').style.display = 'none';
+  document.getElementById('reactionView').style.display = 'block';
+  if (!reactionInterval){
+    const emojiEl = document.getElementById('reactionEmoji');
+    const pair = REACTIONS[mySeat] || ['- . -','^ 0 ^'];
+    let idx = 0;
+    emojiEl.textContent = pair[0];
+    reactionInterval = setInterval(()=>{
+      idx = 1 - idx;
+      emojiEl.textContent = pair[idx];
+    }, 1200);
+  }
+}
+
+function showNormalView(){
+  if (reactionInterval){
+    clearInterval(reactionInterval);
+    reactionInterval = null;
+  }
+  document.getElementById('normalView').style.display = 'block';
+  document.getElementById('reactionView').style.display = 'none';
+}
+
+function showCommentText(text){
+  showNormalView();
+  const commentBox = document.getElementById('commentBox');
+  commentBox.className = 'comment';
+  commentBox.textContent = text;
+}
+
 </script>
 </body>
 </html>
