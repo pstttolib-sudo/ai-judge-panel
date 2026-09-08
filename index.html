@@ -662,16 +662,16 @@ function playIntroThenRecord(){
     els.recBtn.disabled = false;
     startRecording();
   };
-  // 안전장치: 무슨 일이 있어도 최대 12초 뒤엔 무조건 다음으로 진행
-  const safetyTimer = setTimeout(proceed, 12000);
+  // 안전장치: 무슨 일이 있어도 최대 40초 뒤엔 무조건 다음으로 진행 (무음 대기+멘트 길이를 감안해 충분히 여유있게)
+  const safetyTimer = setTimeout(proceed, 40000);
 
   if (!('speechSynthesis' in window)){ clearTimeout(safetyTimer); proceed(); return; }
 
   speechSynthesis.cancel();
 
-  // 소리 없는 더미 발화로 약 5초의 대기 시간을 만듦 (클릭 시점에 바로 speak를 호출해야
+  // 소리 없는 더미 발화로 약 9초의 대기 시간을 만듦 (클릭 시점에 바로 speak를 호출해야
   // 일부 브라우저의 "사용자 동작 직후에만 음성 허용" 제한에 걸리지 않음)
-  const silence = new SpeechSynthesisUtterance('음 '.repeat(20));
+  const silence = new SpeechSynthesisUtterance('음 '.repeat(36));
   silence.lang = 'ko-KR';
   silence.volume = 0;
   silence.rate = 1;
