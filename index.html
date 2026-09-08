@@ -155,17 +155,24 @@
     background:linear-gradient(180deg,#241D15,#1B160F);
     border:2px solid var(--gold); border-radius:10px;
     padding:48px 72px; text-align:center;
+    max-width:90vw;
     box-shadow:0 0 60px rgba(227,168,59,0.35);
     animation:popupPop .45s cubic-bezier(.2,1.4,.4,1);
   }
   .score-popup-label{
-    font-size:16px; letter-spacing:6px; color:var(--gold-dim); text-transform:uppercase; margin-bottom:14px;
+    font-size:18px; letter-spacing:6px; color:var(--gold-dim); text-transform:uppercase; margin-bottom:14px;
   }
   .score-popup-value{
-    font-family:'Black Han Sans',sans-serif; font-size:110px; color:var(--gold); line-height:1;
-    text-shadow:0 0 30px rgba(227,168,59,0.6);
+    font-family:'Black Han Sans',sans-serif; font-size:180px; color:var(--gold); line-height:1;
+    text-shadow:0 0 40px rgba(227,168,59,0.65);
   }
-  .score-popup-unit{ font-size:44px; margin-left:6px; }
+  .score-popup-unit{ font-size:64px; margin-left:8px; }
+  .score-popup-caption{
+    margin-top:26px; padding-top:22px; border-top:1px solid var(--line);
+    font-size:30px; font-weight:700; line-height:1.5; color:var(--text-main);
+    min-height:1em; display:none;
+  }
+  .score-popup-caption.show{ display:block; }
   @keyframes popupFade{ from{opacity:0;} to{opacity:1;} }
   @keyframes popupPop{ from{transform:scale(0.75); opacity:0;} to{transform:scale(1); opacity:1;} }
 </style>
@@ -255,6 +262,7 @@
   <div class="score-popup-card">
     <div class="score-popup-label">총점</div>
     <div class="score-popup-value" id="scorePopupValue">96<span class="score-popup-unit">점</span></div>
+    <div class="score-popup-caption" id="scorePopupCaption"></div>
   </div>
 </div>
 
@@ -864,11 +872,21 @@ async function runDiscussion(){
   saveState();
 
   const scorePopup = document.getElementById('scorePopup');
+  const scorePopupCaption = document.getElementById('scorePopupCaption');
   document.getElementById('scorePopupValue').innerHTML = `${verdictData.score}<span class="score-popup-unit">점</span>`;
+  scorePopupCaption.classList.remove('show');
+  scorePopupCaption.textContent = '';
   scorePopup.classList.add('show');
 
-  await speakHost(`종합 판정 점수는! ${verdictData.score}점입니다!`);
-  await speakHost('AI 심사위원들의 마음을 움직이는데 성공했습니다. 두번째 디지털 패스 획득!! 이제 현재로 돌아가세요.');
+  const scoreLine = `종합 판정 점수는! ${verdictData.score}점입니다!`;
+  const congratsLine = 'AI 심사위원들의 마음을 움직이는데 성공했습니다. 두번째 디지털 패스 획득!! 이제 현재로 돌아가세요.';
+
+  scorePopupCaption.textContent = scoreLine;
+  scorePopupCaption.classList.add('show');
+  await speakHost(scoreLine);
+
+  scorePopupCaption.textContent = congratsLine;
+  await speakHost(congratsLine);
 
   scorePopup.classList.remove('show');
 }
