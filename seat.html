@@ -167,17 +167,13 @@ function sendAck(round){
   jsonpRequest({action:'ackSpeech', seat: mySeat, round: round}).catch(()=>{});
 }
 
-const params = new URLSearchParams(location.search);
 let mySeat = null;
-if (params.has('seat')) mySeat = parseInt(params.get('seat')) - 1;
-else if (localStorage.getItem('myJudgeSeat') !== null) mySeat = parseInt(localStorage.getItem('myJudgeSeat'));
 
 const setupScreen = document.getElementById('setupScreen');
 const seatScreen = document.getElementById('seatScreen');
 
 function activateSeat(idx){
   mySeat = idx;
-  localStorage.setItem('myJudgeSeat', idx);
   setupScreen.style.display = 'none';
   seatScreen.style.display = 'block';
   document.getElementById('seatTag').textContent = 'SEAT ' + (idx+1);
@@ -190,10 +186,6 @@ function activateSeat(idx){
 document.getElementById('confirmSeat').addEventListener('click', ()=>{
   activateSeat(parseInt(document.getElementById('seatSelect').value));
 });
-
-if (mySeat !== null && mySeat >= 0 && mySeat < JUDGES.length){
-  activateSeat(mySeat);
-}
 
 // ⚠️ 여기에 Apps Script 배포 후 나온 웹 앱 URL을 붙여넣으세요 (끝에 /exec 까지 포함)
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypU3VuidcBYPsyErbVYOFT8x6H1teHYLVCszE2p7dMA6rPow3doz2GvAkjVn2PzQUuRA/exec';
