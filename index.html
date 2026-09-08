@@ -811,6 +811,7 @@ async function runDiscussion(){
   state.verdict = verdictData;
   saveState();
   await speakHost(`종합 판정 점수는! ${verdictData.score}점입니다!`);
+  await speakHost('AI 심사위원들의 마음을 움직이는데 성공했습니다. 두번째 디지털 패스 획득!! 이제 현재로 돌아가세요.');
 }
 
 els.discussBtn.addEventListener('click', runDiscussion);
