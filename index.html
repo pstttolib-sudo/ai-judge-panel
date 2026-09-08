@@ -145,6 +145,29 @@
   .verdict .label{font-size:12px;color:var(--gold);letter-spacing:1.5px;margin-bottom:6px;}
   .verdict .score{font-family:'Black Han Sans',sans-serif;font-size:48px;color:var(--gold);line-height:1;}
   .verdict .summary{font-size:14px;line-height:1.7;margin-top:12px;color:var(--text-main);}
+
+  .score-popup{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    background:rgba(10,8,6,0.82); z-index:999; backdrop-filter:blur(3px);
+  }
+  .score-popup.show{ display:flex; animation:popupFade .35s ease; }
+  .score-popup-card{
+    background:linear-gradient(180deg,#241D15,#1B160F);
+    border:2px solid var(--gold); border-radius:10px;
+    padding:48px 72px; text-align:center;
+    box-shadow:0 0 60px rgba(227,168,59,0.35);
+    animation:popupPop .45s cubic-bezier(.2,1.4,.4,1);
+  }
+  .score-popup-label{
+    font-size:16px; letter-spacing:6px; color:var(--gold-dim); text-transform:uppercase; margin-bottom:14px;
+  }
+  .score-popup-value{
+    font-family:'Black Han Sans',sans-serif; font-size:110px; color:var(--gold); line-height:1;
+    text-shadow:0 0 30px rgba(227,168,59,0.6);
+  }
+  .score-popup-unit{ font-size:44px; margin-left:6px; }
+  @keyframes popupFade{ from{opacity:0;} to{opacity:1;} }
+  @keyframes popupPop{ from{transform:scale(0.75); opacity:0;} to{transform:scale(1); opacity:1;} }
 </style>
 </head>
 <body>
@@ -226,6 +249,13 @@
     <div class="summary" id="verdictSummary"></div>
   </div>
 
+</div>
+
+<div id="scorePopup" class="score-popup">
+  <div class="score-popup-card">
+    <div class="score-popup-label">총점</div>
+    <div class="score-popup-value" id="scorePopupValue">96<span class="score-popup-unit">점</span></div>
+  </div>
 </div>
 
 <script>
@@ -832,8 +862,15 @@ async function runDiscussion(){
   state.status = 'done';
   state.verdict = verdictData;
   saveState();
+
+  const scorePopup = document.getElementById('scorePopup');
+  document.getElementById('scorePopupValue').innerHTML = `${verdictData.score}<span class="score-popup-unit">점</span>`;
+  scorePopup.classList.add('show');
+
   await speakHost(`종합 판정 점수는! ${verdictData.score}점입니다!`);
   await speakHost('AI 심사위원들의 마음을 움직이는데 성공했습니다. 두번째 디지털 패스 획득!! 이제 현재로 돌아가세요.');
+
+  scorePopup.classList.remove('show');
 }
 
 els.discussBtn.addEventListener('click', runDiscussion);
